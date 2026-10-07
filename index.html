@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+<title>Stella Sessions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* Tokens are written onto :root at boot from CONFIG.theme.
+     The values here are the fallbacks that keep the file readable
+     if the script fails; they mirror the Stella skin. */
+  :root{
+    --bg:#2F2B29;
+    --bg-deep:#211E1C;
+    --panel:#3A3532;
+    --accent:#C9A266;
+    --accent-soft:#D9705A;
+    --paper:#F1EDE8;
+    --muted:#B4ACA4;
+    --line:rgba(241,237,232,0.12);
+    --line-strong:rgba(241,237,232,0.24);
+    --serif:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --sans:'Jost', system-ui, -apple-system, Segoe UI, sans-serif;
+    --mono:'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --glow-a:rgba(201,162,102,0.16);
+    --glow-b:rgba(198,84,60,0.20);
+    color-scheme:dark;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:var(--sans);background:var(--bg-deep);color:var(--paper);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+  .stage{position:fixed;inset:0;
+    background:
+      radial-gradient(120% 80% at 78% 118%, var(--glow-b) 0%, transparent 55%),
+      radial-gradient(90% 70% at 12% -10%, var(--glow-a) 0%, transparent 50%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);}
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:0.045;mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* ---------- topbar ---------- */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;
+    padding:calc(clamp(18px,2.6vh,30px) + env(safe-area-inset-top,0px)) clamp(26px,4vw,64px) clamp(18px,2.6vh,30px);pointer-events:none}
+  .wordmark{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:0.18em;font-size:clamp(0.72rem,1vw,0.9rem)}
+  .wordmark b{color:var(--paper)} .wordmark span.wm{color:var(--accent)}
+  .topbar-right{font-family:var(--mono);font-size:clamp(0.62rem,0.8vw,0.78rem);letter-spacing:0.22em;color:var(--muted);text-align:right}
+
+  /* mark: eq bars */
+  .mark.eq{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+  .mark.eq i{width:3px;background:var(--accent);height:40%;border-radius:2px;animation:eq 1.1s ease-in-out infinite}
+  .mark.eq i:nth-child(2){animation-delay:.18s;height:80%}
+  .mark.eq i:nth-child(3){animation-delay:.36s;height:55%}
+  .mark.eq i:nth-child(4){animation-delay:.52s;height:95%}
+  @keyframes eq{0%,100%{transform:scaleY(0.35)}50%{transform:scaleY(1)}}
+
+  /* mark: metronome pendulum */
+  .mark.pendulum{position:relative;width:24px;height:16px}
+  .mark.pendulum i{position:absolute;left:calc(50% - 1px);bottom:0;width:2px;height:15px;background:var(--accent);
+    border-radius:1px;transform-origin:bottom center;animation:tick 1.15s cubic-bezier(.45,.05,.55,.95) infinite alternate}
+  .mark.pendulum i::after{content:"";position:absolute;top:2px;left:-2.5px;width:7px;height:4px;background:var(--accent-soft);border-radius:1px}
+  @keyframes tick{from{transform:rotate(-28deg)}to{transform:rotate(28deg)}}
+
+  /* mark: gallery frame */
+  .mark.frame{position:relative;width:15px;height:15px;border:1.5px solid var(--accent)}
+  .mark.frame i{position:absolute;inset:3px;background:var(--accent-soft);animation:breathe 3.2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.35;transform:scale(.75)}50%{opacity:1;transform:scale(1)}}
+
+  /* mark: twinkling four-point star (Stella) */
+  .mark.star{position:relative;width:16px;height:16px}
+  .mark.star i{position:absolute;inset:0;background:var(--accent);
+    clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);animation:twinkle 2.8s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{transform:scale(.7) rotate(0);opacity:.55}50%{transform:scale(1) rotate(45deg);opacity:1}}
+
+  /* ---------- slides ---------- */
+  .deck{position:fixed;inset:0}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(70px,11vh,120px) clamp(34px,7vw,120px) clamp(96px,13vh,130px);
+    opacity:0;transform:translateY(26px);transition:opacity .55s ease, transform .7s cubic-bezier(.22,.61,.36,1);pointer-events:none}
+  .slide.is-active{opacity:1;transform:none;pointer-events:auto}
+  .rise{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .7s cubic-bezier(.22,.61,.36,1)}
+  .slide.is-active .rise{opacity:1;transform:none}
+  .slide.is-active .rise:nth-child(1){transition-delay:.10s}
+  .slide.is-active .rise:nth-child(2){transition-delay:.18s}
+  .slide.is-active .rise:nth-child(3){transition-delay:.26s}
+  .slide.is-active .rise:nth-child(4){transition-delay:.34s}
+  .slide.is-active .rise:nth-child(5){transition-delay:.42s}
+
+  .eyebrow{font-family:var(--mono);font-size:clamp(0.66rem,0.9vw,0.82rem);letter-spacing:0.34em;text-transform:uppercase;color:var(--accent);
+    display:flex;align-items:center;gap:14px;margin-bottom:clamp(18px,2.4vh,30px)}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--accent);opacity:.75}
+
+  h1.display{font-family:var(--serif);font-weight:400;line-height:0.94;letter-spacing:-0.01em;text-wrap:balance}
+  h2.headline{font-family:var(--serif);font-weight:400;font-size:clamp(2.1rem,5vw,4.2rem);line-height:1.04;letter-spacing:-0.01em;max-width:22ch;text-wrap:balance}
+  .lede{font-size:clamp(1.02rem,1.5vw,1.35rem);line-height:1.5;color:var(--muted);max-width:56ch;margin-top:clamp(18px,2.6vh,30px);font-weight:300}
+  .lede strong{color:var(--paper);font-weight:500}
+
+  /* ---------- cover ---------- */
+  .cover{justify-content:flex-end}
+  .cover .kicker{font-family:var(--mono);letter-spacing:0.34em;font-size:clamp(0.7rem,0.95vw,0.86rem);color:var(--accent);text-transform:uppercase;margin-bottom:clamp(20px,3vh,34px)}
+  .cover h1{align-self:flex-start;font-size:clamp(3.6rem,13.5vw,11rem);margin-bottom:clamp(20px,3vh,30px)}
+  .cover h1 em{font-style:italic;color:var(--accent)}
+  .cover-row{display:flex;flex-wrap:wrap;gap:clamp(20px,4vw,64px);align-items:baseline;border-top:1px solid var(--line);padding-top:clamp(18px,2.4vh,26px);max-width:900px}
+  .cover-row .lab{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px}
+  .cover-row .val{font-family:var(--serif);font-size:clamp(1.3rem,2.3vw,1.95rem);color:var(--paper)}
+
+  /* Metronome: rules above + below the cover title, echoing the logo lockup */
+  .skin-metronome .cover h1{border-top:2px solid var(--paper);border-bottom:2px solid var(--paper);
+    padding:clamp(6px,1.2vh,16px) 0 clamp(10px,1.6vh,20px);display:inline-block}
+
+  /* Gallery: open bracket frame around the cover block, echoing the wordmark */
+  .skin-gallery .cover h1{position:relative;display:inline-block;padding:clamp(14px,2.4vh,30px) clamp(20px,3vw,44px) clamp(14px,2.4vh,30px) clamp(20px,3vw,44px)}
+  .skin-gallery .cover h1::before,
+  .skin-gallery .cover h1::after{content:"";position:absolute;width:min(44%,220px);height:100%;top:0;border:2px solid var(--paper);pointer-events:none}
+  .skin-gallery .cover h1::before{left:0;border-right:none}
+  .skin-gallery .cover h1::after{right:0;border-left:none}
+
+  /* Stella: a small constellation over the cover title, a nod to the
+     "light through celestial bodies" residency theme; serif runs at 500
+     because Cormorant is thin on a dark ground */
+  .skin-stella h1.display,.skin-stella h2.headline,.skin-stella .closer h2,.skin-stella .track .ti,
+  .skin-stella .card .role,.skin-stella .benefit h3,.skin-stella .cover-row .val,.skin-stella .pricebig .amount{font-weight:500}
+  .skin-stella .cover h1{position:relative;display:inline-block;padding-top:clamp(28px,5vh,56px)}
+  .skin-stella .cover h1::before{content:"";position:absolute;top:0;left:2px;width:clamp(120px,16vw,220px);height:clamp(24px,4vh,44px);
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 44'%3E%3Cpolyline points='4,34 58,12 112,26 168,6 216,22' fill='none' stroke='%23C9A266' stroke-width='1' stroke-opacity='.55'/%3E%3Cg fill='%23F1EDE8'%3E%3Ccircle cx='4' cy='34' r='2'/%3E%3Ccircle cx='58' cy='12' r='2.6'/%3E%3Ccircle cx='112' cy='26' r='1.8'/%3E%3Ccircle cx='216' cy='22' r='2'/%3E%3C/g%3E%3Cpath fill='%23C9A266' d='M168 0l1.6 4.4L174 6l-4.4 1.6L168 12l-1.6-4.4L162 6l4.4-1.6z'/%3E%3C/svg%3E") no-repeat left center/contain}
+  .skin-stella .card.wild .q{font-style:italic}
+  .skin-stella, .skin-stella .pricebig .amount{font-variant-numeric:lining-nums tabular-nums}
+
+  /* ---------- tracklist ---------- */
+  .tracklist{display:flex;flex-direction:column;gap:2px;margin-top:clamp(24px,3.4vh,40px);max-width:960px}
+  .track{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:20px;padding:clamp(13px,1.9vh,19px) 4px;border-top:1px solid var(--line)}
+  .track:last-child{border-bottom:1px solid var(--line)}
+  .track .no{font-family:var(--mono);color:var(--accent);font-size:0.9rem;font-variant-numeric:tabular-nums}
+  .track .ti{font-family:var(--serif);font-size:clamp(1.2rem,2.1vw,1.75rem)}
+  .track .du{font-family:var(--mono);font-size:0.8rem;color:var(--muted);letter-spacing:0.12em;font-variant-numeric:tabular-nums}
+
+  /* ---------- lineup cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,1.4vw,20px);margin-top:clamp(24px,3.6vh,40px)}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,transparent 100%);border:1px solid var(--line);border-radius:14px;
+    padding:clamp(18px,2.4vh,28px);min-height:clamp(180px,26vh,255px);display:flex;flex-direction:column;justify-content:space-between}
+  .card .idx{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.2em;color:var(--muted)}
+  .card .role{font-family:var(--serif);font-size:clamp(1.2rem,1.8vw,1.6rem);line-height:1.08;display:block}
+  .card .desc{font-size:0.86rem;color:var(--muted);margin-top:10px;line-height:1.45;font-weight:300}
+  .card.wild{border-color:var(--accent);background:linear-gradient(180deg,var(--glow-b) 0%,transparent 100%)}
+  .card.wild .role{color:var(--accent-soft)}
+  .card.wild .q{font-family:var(--serif);font-size:clamp(2.2rem,3.6vw,3.2rem);color:var(--accent);line-height:1;display:block}
+
+  /* Gallery: cards read as framed work with a placard beneath */
+  .skin-gallery .card{border-radius:0;background:none;border:1px solid var(--line-strong);position:relative;padding-bottom:clamp(30px,4vh,44px)}
+  .skin-gallery .card::after{content:"";position:absolute;left:clamp(18px,2.4vh,28px);bottom:clamp(14px,1.8vh,20px);width:26px;height:2px;background:var(--accent)}
+  .skin-gallery .card.wild{border-color:var(--accent);background:linear-gradient(180deg,var(--glow-b) 0%,transparent 100%)}
+
+  /* ---------- benefits ---------- */
+  .benefits{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(12px,1.5vw,22px) clamp(28px,4vw,64px);margin-top:clamp(24px,3.6vh,42px);max-width:1000px}
+  .benefit{padding:clamp(14px,2vh,20px) 0;border-top:1px solid var(--line)}
+  .benefit h3{font-family:var(--serif);font-weight:400;font-size:clamp(1.15rem,1.75vw,1.5rem);margin-bottom:6px}
+  .benefit p{font-size:0.9rem;color:var(--muted);line-height:1.45;font-weight:300;max-width:42ch}
+
+  /* ---------- the ask ---------- */
+  .ask{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,3vw,54px);margin-top:clamp(22px,3.4vh,38px);max-width:1040px}
+  .ask-col h3{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .ask-col.give h3{color:var(--accent)}
+  .ask-col ul{list-style:none;display:flex;flex-direction:column;gap:12px}
+  .ask-col li{position:relative;padding-left:24px;font-size:clamp(0.92rem,1.2vw,1.08rem);line-height:1.4;font-weight:300;color:var(--paper)}
+  .ask-col li::before{content:"–";position:absolute;left:0;top:0;color:var(--accent)}
+  .ask-col li b{font-weight:600}
+
+  /* ---------- the price ---------- */
+  .pricebig{display:flex;align-items:baseline;gap:clamp(12px,2vw,26px);flex-wrap:wrap;margin-top:clamp(4px,1vh,12px)}
+  .pricebig .amount{font-family:var(--serif);font-size:clamp(4.5rem,13vw,10.5rem);line-height:0.86;color:var(--accent);letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+  .pricebig .per{font-family:var(--mono);font-size:clamp(0.85rem,1.4vw,1.15rem);letter-spacing:0.22em;text-transform:uppercase;color:var(--muted)}
+  .price-cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,72px);max-width:900px;margin-top:clamp(34px,5.5vh,68px)}
+  .pcol h3{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--accent);margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+  .pcol.lite h3{color:var(--muted)}
+  .pcol ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+  .pcol li{position:relative;padding-left:22px;font-size:clamp(0.88rem,1.1vw,1rem);line-height:1.4;font-weight:300;color:var(--paper)}
+  .pcol li::before{content:"–";position:absolute;left:0;top:0;color:var(--accent)}
+  .pcol.lite li::before{color:var(--muted)}
+
+  /* ---------- closer ---------- */
+  .closer{align-items:flex-start;justify-content:center}
+  .closer h2{font-family:var(--serif);font-size:clamp(2.8rem,7vw,6rem);line-height:1;max-width:15ch;text-wrap:balance}
+  .closer h2 em{font-style:italic;color:var(--accent)}
+  .closer .lede{margin-top:clamp(24px,3.4vh,40px);max-width:48ch}
+
+  /* ---------- scrubber ---------- */
+  .scrubber{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:clamp(14px,2vw,28px);
+    padding:clamp(14px,2vh,22px) clamp(26px,4vw,64px) calc(clamp(14px,2vh,22px) + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,transparent 0%, var(--bg-deep) 62%)}
+  .tc{font-family:var(--mono);font-size:0.78rem;letter-spacing:0.14em;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .tc b{color:var(--accent)}
+  .scrub-title{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);white-space:nowrap;min-width:130px}
+  .wave{flex:1;display:flex;align-items:center;gap:2px;height:34px;cursor:pointer}
+  .wave i{flex:1;background:var(--line-strong);border-radius:2px;transition:background .45s ease;transform-origin:center}
+  .wave i.on{background:var(--accent)}
+  .nav-btns{display:flex;gap:8px}
+  .nav-btns button, .fs{background:transparent;border:1px solid var(--line-strong);color:var(--paper);width:38px;height:38px;border-radius:9px;cursor:pointer;
+    font-size:1rem;display:grid;place-items:center;transition:border-color .2s, background .2s;font-family:var(--sans)}
+  .nav-btns button:hover,.fs:hover{border-color:var(--accent);background:var(--glow-b)}
+  .nav-btns button:focus-visible,.fs:focus-visible,.wave:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  .playhead{position:fixed;top:0;bottom:0;width:2px;background:linear-gradient(180deg,transparent,var(--accent),transparent);opacity:0;z-index:35;pointer-events:none}
+  .playhead.sweep{animation:sweep .6s ease-out}
+  @keyframes sweep{0%{left:-2%;opacity:0}15%{opacity:.9}100%{left:102%;opacity:0}}
+
+  .hint{position:fixed;bottom:calc(clamp(14px,2vh,22px) + 46px);left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:0.66rem;
+    letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;z-index:30;opacity:.7;transition:opacity .6s ease}
+  .hint.gone{opacity:0}
+
+  @media (max-width:900px){
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .benefits{grid-template-columns:1fr}
+    .ask,.price-cols{grid-template-columns:1fr}
+    .scrub-title{display:none}
+    .skin-gallery .cover h1::before,.skin-gallery .cover h1::after{width:34px}
+  }
+  @media (max-height:620px){
+    .cards{grid-template-columns:repeat(4,1fr)}
+    .card{min-height:0}
+    .price-cols{margin-top:clamp(14px,2vh,24px)}
+  }
+  /* ---------- phones: slides scroll, content stacks, swipe to advance ---------- */
+  @media (max-width:640px){
+    .topbar{padding-left:20px;padding-right:20px;gap:14px;background:linear-gradient(180deg,var(--bg-deep) 55%,transparent 100%)}
+    .topbar-right{font-size:0.58rem;letter-spacing:0.14em;line-height:1.5;max-width:48%}
+    .slide{justify-content:flex-start;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+      padding:calc(84px + env(safe-area-inset-top,0px)) 20px calc(110px + env(safe-area-inset-bottom,0px))}
+    .slide.cover{justify-content:flex-end}
+    .slide.closer{justify-content:center}
+    .eyebrow{letter-spacing:0.24em;margin-bottom:16px}
+    h2.headline{font-size:clamp(1.9rem,8.6vw,2.5rem)}
+    .lede{font-size:1rem;margin-top:16px}
+    .cover .kicker{letter-spacing:0.2em;font-size:0.66rem;line-height:1.6}
+    .cover h1{font-size:clamp(3rem,15.5vw,4.4rem)}
+    .cover-row{gap:18px 28px}
+    .track{grid-template-columns:34px 1fr auto;gap:12px;padding:12px 2px}
+    .track .ti{font-size:1.1rem}
+    .track .du{font-size:0.7rem;letter-spacing:0.06em}
+    .cards{grid-template-columns:1fr;gap:10px;margin-top:22px}
+    .card{min-height:0;padding:16px 18px;gap:10px}
+    .card .desc{margin-top:6px}
+    .card.wild .q{font-size:2rem}
+    .benefits{gap:4px;margin-top:20px}
+    .ask{gap:26px;margin-top:22px}
+    .ask-col h3{margin-bottom:12px}
+    .ask-col ul{gap:9px}
+    .pricebig .amount{font-size:clamp(3.8rem,20vw,5.2rem)}
+    .price-cols{gap:26px;margin-top:28px}
+    .closer h2{font-size:clamp(2.5rem,12vw,3.4rem)}
+    .scrubber{padding-left:20px;padding-right:20px;gap:12px}
+    .wave{height:28px}
+    .nav-btns button,.fs{width:44px;height:44px}
+    .nav-btns .fs{display:none}
+    .wave{min-width:0;gap:1px}
+    .hint{bottom:calc(84px + env(safe-area-inset-bottom,0px));width:calc(100% - 40px);text-align:center;font-size:0.58rem;letter-spacing:0.14em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .slide,.rise{transition:opacity .25s ease}
+    .mark i{animation:none}
+    .playhead.sweep{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="stage"></div>
+  <div class="grain"></div>
+
+  <header class="topbar">
+    <div class="wordmark"><b>FOMO</b> <span class="wm">EVENTS</span>
+      <span class="mark" id="mark" aria-hidden="true"></span>
+    </div>
+    <div class="topbar-right" data-cfg="preparedFor"></div>
+  </header>
+
+  <div class="playhead" id="playhead"></div>
+
+  <main class="deck" id="deck">
+
+    <!-- 01 COVER -->
+    <section class="slide cover" data-title="Cover">
+      <div class="rise kicker" data-cfg="kicker"></div>
+      <h1 class="display rise"><span data-cfg="seriesA"></span><br><em data-cfg="seriesB"></em></h1>
+      <div class="cover-row rise">
+        <div><span class="lab">Presented by</span><span class="val" data-cfg="presenter"></span></div>
+        <div><span class="lab">When</span><span class="val" data-cfg="when"></span></div>
+      </div>
+    </section>
+
+    <!-- 02 THE IDEA -->
+    <section class="slide" data-title="The Idea">
+      <div class="rise eyebrow">The Idea</div>
+      <h2 class="headline rise" data-cfg="copy.ideaHead"></h2>
+      <p class="lede rise" data-cfg="copy.ideaBody"></p>
+    </section>
+
+    <!-- 03 THE FORMAT -->
+    <section class="slide" data-title="The Format">
+      <div class="rise eyebrow">The Format</div>
+      <h2 class="headline rise" data-cfg="copy.formatHead"></h2>
+      <div class="tracklist rise" data-list="tracks"></div>
+      <p class="lede rise" data-cfg="copy.formatBody"></p>
+    </section>
+
+    <!-- 04 THE LINEUP -->
+    <section class="slide" data-title="The Lineup">
+      <div class="rise eyebrow">The Lineup</div>
+      <h2 class="headline rise" data-cfg="copy.lineupHead"></h2>
+      <div class="cards rise" data-list="lineup"></div>
+    </section>
+
+    <!-- 05 WHAT YOU GET -->
+    <section class="slide" data-title="What You Get">
+      <div class="rise eyebrow">What You Get</div>
+      <h2 class="headline rise" style="max-width:21ch" data-cfg="copy.benefitsHead"></h2>
+      <div class="benefits rise" data-list="benefits"></div>
+    </section>
+
+    <!-- 06 THE ASK -->
+    <section class="slide" data-title="The Ask">
+      <div class="rise eyebrow">The Ask</div>
+      <h2 class="headline rise" style="max-width:22ch" data-cfg="copy.askHead"></h2>
+      <div class="ask rise">
+        <div class="ask-col give">
+          <h3 data-cfg="copy.giveHead"></h3>
+          <ul data-list="askGive"></ul>
+        </div>
+        <div class="ask-col">
+          <h3 data-cfg="copy.getHead"></h3>
+          <ul data-list="askGet"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 THE PRICE -->
+    <section class="slide" data-title="The Price">
+      <div class="rise eyebrow">The Price</div>
+      <div class="pricebig rise">
+        <span class="amount" data-cfg="price"></span>
+        <span class="per" data-cfg="priceUnit"></span>
+      </div>
+      <div class="price-cols rise">
+        <div class="pcol"><h3>What that covers</h3><ul data-list="priceIncludes"></ul></div>
+        <div class="pcol lite"><h3>What it doesn't</h3><ul data-list="priceExcludes"></ul></div>
+      </div>
+    </section>
+
+    <!-- 08 CLOSER -->
+    <section class="slide closer" data-title="Let's Try It">
+      <div class="rise eyebrow">Let's Try It</div>
+      <h2 class="rise" data-cfg-html="copy.closerHead"></h2>
+      <p class="lede rise" data-cfg="copy.closerBody"></p>
+    </section>
+
+  </main>
+
+  <div class="hint" id="hint">← / → or click to advance · F for fullscreen</div>
+
+  <footer class="scrubber">
+    <div class="tc"><b id="tcNow">01</b> / <span id="tcTotal">08</span></div>
+    <div class="wave" id="wave" tabindex="0" role="slider" aria-label="Slide position" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1"></div>
+    <div class="scrub-title" id="scrubTitle">Cover</div>
+    <div class="nav-btns">
+      <button id="prev" aria-label="Previous slide">‹</button>
+      <button id="next" aria-label="Next slide">›</button>
+      <button class="fs" id="fs" aria-label="Toggle fullscreen">⛶</button>
+    </div>
+  </footer>
+
+<script>
+/* ============ PROPERTY CONFIG — Stella at Five Points ============ */
+const CONFIG = {
+  skin:        "stella",                 // body class: drives the few brand-specific flourishes
+  mark:        "star",                   // topbar animation: "eq" | "pendulum" | "frame" | "star"
+  preparedFor: "Prepared for Stella at Five Points",
+  kicker:      "A monthly live music series · Five Points, Huntsville",
+  seriesA:     "Stella",                 // cover, line 1
+  seriesB:     "Sessions",               // cover, line 2 — italic, accent color
+  presenter:   "FOMO Events",
+  when:        "1st Thursday, 6:30 PM",
+  price:       "$500",
+  priceUnit:   "a month",
+
+  theme: {
+    bg:        "#2F2B29",
+    bgDeep:    "#211E1C",
+    panel:     "#3A3532",
+    accent:    "#C9A266",
+    accentSoft:"#D9705A",
+    paper:     "#F1EDE8",
+    muted:     "#B4ACA4",
+    line:      "rgba(241,237,232,0.12)",
+    lineStrong:"rgba(241,237,232,0.24)",
+    glowA:     "rgba(201,162,102,0.22)",
+    glowB:     "rgba(198,84,60,0.20)",
+    serif:     "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+    sans:      "'Jost', system-ui, -apple-system, Segoe UI, sans-serif",
+    mono:      "'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace"
+  },
+
+  tracks: [
+    ["Singer-songwriter", "15 MIN"],
+    ["R&B vocalist", "15 MIN"],
+    ["Strings: violin, harp, cello", "15 MIN"],
+    ["The Wildcard", "15 MIN"]
+  ],
+
+  lineup: [
+    ["Singer-songwriter", "Someone with a guitar and songs worth sitting down for."],
+    ["R&B vocalist", "An R&B singer for once the room's warmed up."],
+    ["Strings", "A violinist, harpist, or cellist. Not what you expect at an apartment show."],
+    ["The Wildcard", "We keep the fourth act quiet. No name, no flyer. You find out when they walk up."]
+  ],
+
+  benefits: [
+    ["Something to show on tours", "A show no other Five Points property runs. Leasing can walk prospects right into it."],
+    ["A reason to renew", "When something is actually happening where people live, they stay."],
+    ["Content you can post", "Photos and video from every night, yours to use."],
+    ["It finishes the arts program", "You already have painting, food, and a maker space. Music is the piece that's missing. Your artists in residence are welcome on the bill."]
+  ],
+
+  askGive: [
+    "The artists, <b>booked each month</b>",
+    "Sound and setup",
+    "Running the night",
+    "Promo made for your residents",
+    "Photos and video after"
+  ],
+
+  askGet: [
+    "A space in the building, <b>1st Thursday</b> each month",
+    "A heads-up to residents"
+  ],
+
+  priceIncludes: [
+    "Four artists, booked and paid",
+    "Sound gear and setup",
+    "Someone running the night",
+    "Promo built for your residents",
+    "Photos and video after"
+  ],
+
+  priceExcludes: [
+    "No long contract",
+    "Month to month",
+    "First one is a trial"
+  ],
+
+  copy: {
+    ideaHead:     "Live music at Stella, one Thursday a month.",
+    ideaBody:     "Stella Sessions is a monthly show we would run for your residents. Four local artists, about an hour of music, right as the sun goes down. You built Stella around living with the arts. This puts live music in the building.",
+    formatHead:   "Four short sets, done in an hour.",
+    formatBody:   "Fifteen minutes a set keeps it moving. Residents can come up after work and still catch the whole thing.",
+    lineupHead:   "Three acts we announce. One we never do.",
+    benefitsHead: "What it does for Stella.",
+    askHead:      "Here's the split.",
+    giveHead:     "FOMO Events brings",
+    getHead:      "Stella provides",
+    closerHead:   "Let's run <em>one</em> and see.",
+    closerBody:   "Give us a single Thursday. We'll book the artists, handle the setup, and show you what the night actually looks like. If your residents love it, we make it a monthly thing."
+  }
+};
+/* ===================== END CONFIG ===================== */
+
+
+/* ================================================================
+   ENGINE — identical across every property. Do not edit per-deck.
+   ================================================================ */
+(function(){
+  const cfg = CONFIG;
+
+  /* --- theme tokens --- */
+  const root = document.documentElement;
+  const kebab = k => '--' + k.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+  Object.entries(cfg.theme).forEach(([k, v]) => root.style.setProperty(kebab(k), v));
+  document.body.className = 'skin-' + cfg.skin;
+
+  /* --- topbar mark --- */
+  const mark = document.getElementById('mark');
+  mark.className = 'mark ' + cfg.mark;
+  const pips = cfg.mark === 'eq' ? 4 : 1;
+  for (let i = 0; i < pips; i++) mark.appendChild(document.createElement('i'));
+
+  /* --- text bindings --- */
+  const dig = path => path.split('.').reduce((o, k) => (o == null ? o : o[k]), cfg);
+  document.querySelectorAll('[data-cfg]').forEach(el => { el.textContent = dig(el.dataset.cfg) ?? ''; });
+  document.querySelectorAll('[data-cfg-html]').forEach(el => { el.innerHTML = dig(el.dataset.cfgHtml) ?? ''; });
+
+  /* --- list bindings --- */
+  const esc = s => String(s).replace(/&(?!(amp|lt|gt|quot|#\d+);)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const builders = {
+    tracks: (host, rows) => rows.forEach(([title, dur], i) => {
+      const d = document.createElement('div');
+      d.className = 'track';
+      d.innerHTML = '<span class="no">' + String(i + 1).padStart(2, '0') + '</span>' +
+                    '<span class="ti">' + esc(title) + '</span>' +
+                    '<span class="du">' + esc(dur) + '</span>';
+      host.appendChild(d);
+    }),
+    lineup: (host, rows) => rows.forEach(([role, desc], i) => {
+      const last = i === rows.length - 1;
+      const d = document.createElement('div');
+      d.className = 'card' + (last ? ' wild' : '');
+      d.innerHTML = '<span class="idx">' + String(i + 1).padStart(2, '0') + ' / SET</span>' +
+                    '<div>' + (last ? '<span class="q">?</span>' : '') +
+                    '<span class="role">' + esc(role) + '</span>' +
+                    '<p class="desc">' + esc(desc) + '</p></div>';
+      host.appendChild(d);
+    }),
+    benefits: (host, rows) => rows.forEach(([h, p]) => {
+      const d = document.createElement('div');
+      d.className = 'benefit';
+      d.innerHTML = '<h3>' + esc(h) + '</h3><p>' + esc(p) + '</p>';
+      host.appendChild(d);
+    }),
+    bullets: (host, rows) => rows.forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = t;                       // author-written copy, may contain <b>
+      host.appendChild(li);
+    })
+  };
+  document.querySelectorAll('[data-list]').forEach(host => {
+    const key = host.dataset.list;
+    (builders[key] || builders.bullets)(host, cfg[key] || []);
+  });
+
+  /* --- deck navigation --- */
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let cur = 0;
+
+  const wave = document.getElementById('wave');
+  const BARS = 66;
+  let seed = 7;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (let i = 0; i < BARS; i++) {
+    const b = document.createElement('i');
+    b.style.height = (24 + Math.abs(Math.sin(i * 0.5)) * 40 + rnd() * 36) + '%';
+    b.dataset.slide = Math.min(total - 1, Math.floor(i / (BARS / total)));
+    wave.appendChild(b);
+  }
+  const bars = Array.from(wave.children);
+
+  const tcNow = document.getElementById('tcNow');
+  const tcTotal = document.getElementById('tcTotal');
+  const scrubTitle = document.getElementById('scrubTitle');
+  const playhead = document.getElementById('playhead');
+  const hint = document.getElementById('hint');
+  tcTotal.textContent = String(total).padStart(2, '0');
+  wave.setAttribute('aria-valuemax', total);
+
+  function sweep(){ playhead.classList.remove('sweep'); void playhead.offsetWidth; playhead.classList.add('sweep'); }
+
+  function render(){
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === cur));
+    const filled = Math.round((cur + 1) / total * BARS);
+    bars.forEach((b, i) => b.classList.toggle('on', i < filled));
+    tcNow.textContent = String(cur + 1).padStart(2, '0');
+    scrubTitle.textContent = slides[cur].dataset.title || '';
+    wave.setAttribute('aria-valuenow', cur + 1);
+  }
+  function go(n, doSweep = true){
+    const next = Math.max(0, Math.min(total - 1, n));
+    if (next === cur) return;
+    cur = next; if (doSweep) sweep(); render();
+    slides[cur].scrollTop = 0;
+  }
+
+  document.getElementById('next').onclick = e => { e.stopPropagation(); go(cur + 1); };
+  document.getElementById('prev').onclick = e => { e.stopPropagation(); go(cur - 1); };
+  document.getElementById('fs').onclick = e => { e.stopPropagation(); toggleFs(); };
+  wave.addEventListener('click', e => { const bar = e.target.closest('i'); if (bar) go(parseInt(bar.dataset.slide, 10)); });
+  wave.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total - 1); }
+    else if (e.key === 'f' || e.key === 'F') { toggleFs(); }
+  });
+
+  const deck = document.getElementById('deck');
+  let swiped = false;
+  deck.addEventListener('click', e => {
+    if (swiped) { swiped = false; return; }
+    if (window.getSelection().toString()) return;
+    go(e.clientX / window.innerWidth < 0.25 ? cur - 1 : cur + 1);
+  });
+
+  /* --- swipe left / right on touch screens; vertical drags scroll the slide --- */
+  let tx = 0, ty = 0;
+  deck.addEventListener('touchstart', e => { const t = e.touches[0]; tx = t.clientX; ty = t.clientY; }, { passive: true });
+  deck.addEventListener('touchend', e => {
+    const t = e.changedTouches[0], dx = t.clientX - tx, dy = t.clientY - ty;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      swiped = true; setTimeout(() => { swiped = false; }, 400);
+      go(dx < 0 ? cur + 1 : cur - 1);
+    }
+  }, { passive: true });
+  if (matchMedia('(pointer: coarse)').matches) hint.textContent = 'Swipe or tap to advance';
+
+  function toggleFs(){
+    if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.()?.catch?.(() => {}); }
+    else { document.exitFullscreen?.(); }
+  }
+
+  let hinted = false;
+  function killHint(){ if (!hinted) { hinted = true; hint.classList.add('gone'); } }
+  document.addEventListener('keydown', killHint, { once: true });
+  document.addEventListener('click', killHint, { once: true });
+  setTimeout(() => hint.classList.add('gone'), 6000);
+
+  render();
+})();
+</script>
+</body>
+</html>
